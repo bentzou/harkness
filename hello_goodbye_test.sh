@@ -16,4 +16,5 @@ function test_goodbye () {
 # CONFIG
 HARKNESS_TESTS=(
    test_hello_world
+   test_goodbye
 )

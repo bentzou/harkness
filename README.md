@@ -61,7 +61,11 @@ TEST: test_hello_world
    success -- test hello method:  'hello earth' == 'hello earth'
    PASSED: 2/2 assertions
 
+TEST: test_goodbye
+   success -- test goodbye method:'goodbye' == 'goodbye'
+   PASSED: 1/1 assertions
+
 SUMMARY
-   ASSERTS PASSED: 2/2
-   TESTS PASSED: 1/1
+   ASSERTS PASSED: 3/3
+   TESTS PASSED: 2/2
 ```
