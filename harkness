@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# assert
+function assertEquals () {
+   (( HARKNESS_TEST_NUM_ASSERT++ ))
+   (( HARKNESS_TEST_TOTAL_ASSERT++ ))
+
+   local name="$1"
+   local expected="$2"
+   local actual="${3:-}"
+
+   local result
+   local equals
+   if [ "$expected" == "$actual" ]; then
+      (( HARKNESS_TEST_NUM_ASSERT_PASSED++ ))
+      (( HARKNESS_TEST_TOTAL_ASSERT_PASSED++ ))
+
+      result="success"
+      equals="=="
+   else
+      result="failure"
+      equals="!="
+   fi
+
+   printf "   %-11s" "$result --"
+   printf "%-20s" "$name:"
+   printf "%s\n" "'$expected' $equals '$actual'"
+}
+
+
+# test
+function harkness_test_init () {
+   printf "TEST: $1\n"
+   HARKNESS_TEST_NUM_ASSERT=0
+   HARKNESS_TEST_NUM_ASSERT_PASSED=0
+}
+
+function harkness_test_run () {
+   "$@"
+}
+
+function harkness_test_report () {
+   echo "   PASSED: $HARKNESS_TEST_NUM_ASSERT_PASSED/$HARKNESS_TEST_NUM_ASSERT"
+   echo
+}
+
+
+# suite
+function harkness_suite_init () {
+   HARKNESS_TEST_NUM_ASSERT_PASSED=0
+   HARKNESS_TEST_NUM_ASSERT=0
+
+   HARKNESS_TEST_TOTAL_ASSERT_PASSED=0
+   HARKNESS_TEST_TOTAL_ASSERT=0
+
+   HARKNESS_SUITE_TOTAL_TEST_PASSED=0
+   HARKNESS_SUITE_TOTAL_TEST=0
+}
+
+function harkness_suite_report () {
+   echo "ASSERTS PASSED: $HARKNESS_SUITE_TOTAL_TEST_PASSED/$HARKNESS_SUITE_TOTAL_TEST"
+   echo "TESTS PASSED: $HARKNESS_TEST_TOTAL_ASSERT_PASSED/$HARKNESS_TEST_TOTAL_ASSERT"
+}
+
+
+# harness
+function harkness_run_tests () {
+   harkness_suite_init
+
+   local test
+   for test in ${HARKNESS_TESTS[@]}; do 
+      (( HARKNESS_SUITE_TOTAL_TEST++))
+
+      harkness_test_init $test
+      harkness_test_run $test
+      harkness_test_report
+
+      if (( $HARKNESS_TEST_NUM_ASSERT_PASSED == $HARKNESS_TEST_NUM_ASSERT )); then
+         (( HARKNESS_SUITE_TOTAL_TEST_PASSED++ ))
+      fi
+   done
+
+   harkness_suite_report
+}
+
