@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# support methods
+function error () {
+   printf "error: %s\n" "$*"
+   return 1
+}
+
 # assert
 function assertEquals () {
    (( HARKNESS_TEST_NUM_ASSERT++ ))
@@ -31,22 +37,42 @@ function assertEquals () {
 # test
 function harkness_test_init () {
    printf "TEST: $1\n"
+
+   HARKNESS_TEST_RESULT=0
    HARKNESS_TEST_NUM_ASSERT=0
    HARKNESS_TEST_NUM_ASSERT_PASSED=0
 }
 
 function harkness_test_run () {
+   local test_name="$@"
+
+   if ! [[ "$test_name" =~ ^[a-zA-Z0-9_]+$ ]]; then
+      printf "   "; error "test name cannot contain non-alphanumeric characters"
+      HARKNESS_TEST_RESULT=1
+      return 1
+   fi
+
+   if [ "$(type -t "$test_name")" != "function" ]; then
+      printf "   "; error "test function '$test_name' could not be found"
+      HARKNESS_TEST_RESULT=1
+      return 1
+   fi
+
    "$@"
+   HARKNESS_TEST_RESULT=$?
 }
 
 function harkness_test_report () {
-   echo "   PASSED: $HARKNESS_TEST_NUM_ASSERT_PASSED/$HARKNESS_TEST_NUM_ASSERT"
-   echo
+   printf "   PASSED: $HARKNESS_TEST_NUM_ASSERT_PASSED/$HARKNESS_TEST_NUM_ASSERT assertions"
+   printf "\n\n"
 }
 
 
 # suite
 function harkness_suite_init () {
+   printf "HARKNESS TEST SUITE\n"
+   printf "\n"
+
    HARKNESS_TEST_NUM_ASSERT_PASSED=0
    HARKNESS_TEST_NUM_ASSERT=0
 
@@ -58,28 +84,66 @@ function harkness_suite_init () {
 }
 
 function harkness_suite_report () {
-   echo "ASSERTS PASSED: $HARKNESS_TEST_TOTAL_ASSERT_PASSED/$HARKNESS_TEST_TOTAL_ASSERT"
-   echo "TESTS PASSED: $HARKNESS_SUITE_TOTAL_TEST_PASSED/$HARKNESS_SUITE_TOTAL_TEST"
+   printf "SUMMARY\n"
+   printf "   ASSERTS PASSED: $HARKNESS_TEST_TOTAL_ASSERT_PASSED/$HARKNESS_TEST_TOTAL_ASSERT\n"
+   printf "   TESTS PASSED: $HARKNESS_SUITE_TOTAL_TEST_PASSED/$HARKNESS_SUITE_TOTAL_TEST\n"
 }
 
+function harkness_suite_end () {
+   HARKNESS_COMBO_BREAKER=true
+}
 
 # harness
+function harkness_update_counters () {
+   (( HARKNESS_SUITE_TOTAL_TEST++))
+
+   if (( HARKNESS_TEST_RESULT == 0 )) && (( $HARKNESS_TEST_NUM_ASSERT_PASSED == $HARKNESS_TEST_NUM_ASSERT )); then
+      (( HARKNESS_SUITE_TOTAL_TEST_PASSED++ ))
+   fi
+}
+
 function harkness_run_tests () {
+   [ -n "$HARKNESS_COMBO_BREAKER" ] && return
+
    harkness_suite_init
 
-   local test
-   for test in ${HARKNESS_TESTS[@]}; do 
-      (( HARKNESS_SUITE_TOTAL_TEST++))
-
-      harkness_test_init $test
-      harkness_test_run $test
+   local harkness_test
+   for harkness_test in "${HARKNESS_TESTS[@]}"; do 
+      harkness_test_init "$harkness_test"
+      harkness_test_run "$harkness_test"
       harkness_test_report
-
-      if (( $HARKNESS_TEST_NUM_ASSERT_PASSED == $HARKNESS_TEST_NUM_ASSERT )); then
-         (( HARKNESS_SUITE_TOTAL_TEST_PASSED++ ))
-      fi
+      harkness_update_counters
    done
 
    harkness_suite_report
+   harkness_suite_end
 }
 
+function run () {
+   if (( $# == 0 )); then
+      error "a testfile was not specified"
+      exit 1
+   fi
+
+   if (( $# > 1 )); then
+      error "too many arguments"
+      exit 1
+   fi
+
+   if [ ! -f "$1" ]; then
+      error "'$1' is not a file"
+      exit 1
+   fi
+
+   source "$1"
+   if [ -z "$HARKNESS_TESTS" ]; then
+      error "no tests were specified in \$HARKNESS_TESTS"
+      exit 1
+   fi
+
+   harkness_run_tests
+}
+
+if [ "$0" = "${BASH_SOURCE[0]}" ]; then
+   run "$@"
+fi
