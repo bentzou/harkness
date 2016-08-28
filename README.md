@@ -7,7 +7,7 @@ Harkness is a test harness for Bash scripts.
 
 You have the following functions in a script named `hello_goodbye.sh`.
 
-```
+``` bash
 function hello () {
    if [ -n "$1" ]; then
       echo "hello $1"
@@ -22,7 +22,7 @@ function goodbye () {
 ```
 
 Write your test cases in the below format.
-```
+``` bash
 # RESOURCES
 # Source your functions however you like.
 
@@ -52,7 +52,7 @@ HARKNESS_TESTS=(
 ```
 
 Run your tests.
-```
+``` bash
 $> ./harkness helloworld_test.sh
 HARKNESS TEST SUITE
 
